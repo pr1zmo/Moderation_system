@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moderation System</title>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap");
+        :root {
+            color-scheme: dark;
+            --bg-0: #0b0f14;
+            --bg-1: #0b1220;
+            --bg-2: #111a2b;
+            --panel: #111826;
+            --border: #233044;
+            --text: #e6edf3;
+            --muted: #9fb0c3;
+            --accent-1: #38bdf8;
+            --accent-2: #3b82f6;
+            --accent-3: #6366f1;
+            --ok: #6ee7b7;
+            --ko: #fb7185;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+        }
+        body {
+            font-family: "Space Grotesk", sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            color: var(--text);
+            background:
+                radial-gradient(800px 400px at 10% -10%, #1e2a3e 0%, transparent 60%),
+                radial-gradient(600px 300px at 110% 10%, #1a2f45 0%, transparent 55%),
+                linear-gradient(160deg, var(--bg-1) 0%, var(--bg-0) 45%, var(--bg-2) 100%);
+        }
+        .container {
+            width: 100%;
+            max-width: 520px;
+            border: 1px solid var(--border);
+            background: linear-gradient(180deg, #0f1623 0%, var(--panel) 100%);
+            padding: 24px;
+            border-radius: 14px;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+            position: relative;
+            z-index: 1;
+        }
+        h1 {
+            margin: 0 0 16px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #0c121c;
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+        }
+        input:focus {
+            border-color: #2f4461;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+        }
+        input::placeholder {
+            color: var(--muted);
+        }
+        button {
+            width: 100%;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 10px;
+            color: #06121f;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3));
+            background-size: 200% 100%;
+            transition: transform 180ms ease, box-shadow 200ms ease;
+            animation: shimmer 3.5s ease infinite;
+        }
+        button:hover {
+            transform: translateY(-1px) scale(1.01);
+            box-shadow: 0 10px 22px rgba(59, 130, 246, 0.35);
+        }
+        button:active {
+            transform: translateY(0) scale(0.99);
+        }
+        #result {
+            margin-top: 16px;
+            padding-left: 14px;
+            min-height: 28px;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+        #result.ok {
+            color: var(--ok);
+        }
+        #result.ko {
+            color: var(--ko);
+        }
+
+        /* ── full-screen watermark overlay ── */
+        #bg-watermark {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            pointer-events: none;
+            z-index: 0;
+
+            transform: translateX(100%);
+            transition: transform 1.2s ease, opacity 0.6s ease;
+            opacity: 0;
+        }
+
+
+        #bg-watermark.visible {
+            /* opacity: 1; */
+            opacity: 1;
+            transform: translateX(0);
+        }
+        #bg-watermark .watermark-text {
+            font-size: clamp(14rem, 45vw, 42rem);
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            user-select: none;
+        }
+        #bg-watermark.ok {
+            background: radial-gradient(circle at 50% 50%, rgba(110, 231, 183, 0.12) 0%, transparent 70%);
+        }
+        #bg-watermark.ok .watermark-text {
+            color: rgba(110, 231, 183, 0.14);
+        }
+        #bg-watermark.ko {
+            background: radial-gradient(circle at 50% 50%, rgba(251, 113, 133, 0.12) 0%, transparent 70%);
+        }
+        #bg-watermark.ko .watermark-text {
+            color: rgba(251, 113, 133, 0.14);
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- full-screen watermark -->
+    <div id="bg-watermark">
+        <span class="watermark-text"></span>
+    </div>
+
+    <div class="container">
+        <h1>Moderation System</h1>
+        <form id="moderationForm">
+            <label for="inputText">Text to moderate</label>
+            <input id="inputText" name="text" placeholder="Enter text to moderate..." required />
+            <button type="submit">Check</button>
+        </form>
+        <div id="result" style="display: none"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('moderationForm');
+        const resultDiv = document.getElementById('result');
+        const watermark = document.getElementById('bg-watermark');
+        const watermarkText = watermark.querySelector('.watermark-text');
+
+        function showResult(result) {
+            const cls = result === 'OK' ? 'ok' : 'ko';
+
+            // small inline result
+            resultDiv.textContent = result;
+            resultDiv.className = cls;
+            resultDiv.style.display = 'block';
+
+            // reset watermark: snap to hidden state immediately
+            watermark.classList.remove('visible', 'ok', 'ko');
+            watermark.style.transition = 'none';
+            void watermark.offsetWidth;           // force reflow
+
+            // re-enable transition and trigger fade/slide in
+            watermark.style.transition = '';
+            watermarkText.textContent = result;
+            watermark.classList.add(cls, 'visible');
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const input = document.getElementById('inputText').value;
+
+            try {
+                const response = await fetch('/moderate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: input })
+                });
+
+                const data = await response.json();
+                showResult((data.result || 'KO').toUpperCase());
+            } catch (error) {
+                console.error('Error:', error);
+                showResult('KO');
+            }
+        });
+    </script>
+</body>
+</html>
