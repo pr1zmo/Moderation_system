@@ -22,4 +22,6 @@ build/
 
 data/
 
-Automated-Content-Moderation/test*
+Automated-Content-Moderation
+test*
+
