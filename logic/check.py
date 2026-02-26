@@ -1,7 +1,12 @@
 import csv
 import string
 import pandas as pd
+import pickle
 import re
+import os
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 i_la = ["|", "1", "!", "í", "ì", "î", "ï"]
 a_la = ["4", "@", "á", "à", "â", "ä"]
@@ -71,9 +76,48 @@ def one_word(text: str) -> bool:
                     return False
     return True
 
+loaded_vectorizer = None
+loaded_model = None
+
+def get_model():
+    global loaded_vectorizer, loaded_model
+    if loaded_vectorizer is None or loaded_model is None:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        vec_path = os.path.join(base_dir, 'vectorizer.pkl')
+        model_path = os.path.join(base_dir, 'model.pkl')
+        
+        if os.path.exists(vec_path) and os.path.exists(model_path):
+            with open(vec_path, 'rb') as file:
+                loaded_vectorizer = pickle.load(file)
+            with open(model_path, 'rb') as file:
+                loaded_model = pickle.load(file)
+    return loaded_vectorizer, loaded_model
+
+def clean_tweet(text):
+    text = re.sub(r'@\w+', '', text)
+    text = re.sub(r'http\S+', '', text)
+    text = re.sub(r'&#?\w+;', '', text)
+    text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    if text.startswith('RT '):
+        text = text[3:].strip()
+    text = text.lower()
+    return text
+
 def sentence(text) -> bool:
-    preprocessing(text)
-    return Decision()
+    """
+    Evaluates a full sentence using the trained LogisticRegression model.
+    Returns True if the sentence is allowed (clean), False if it is blocked (offensive).
+    """
+    vec, mod = get_model()
+    if vec is None or mod is None:
+        # Fallback if model isn't trained yet
+        return True
+        
+    cleaned = clean_tweet(text)
+    X_test = vec.transform([cleaned])
+    prediction = mod.predict(X_test)[0]
+    return prediction == 0
 
 def preprocessing(text):
     '''
@@ -104,9 +148,32 @@ def tokenize(words: list):
     Split the sentence into words, will use that to better pair those words with the preprocessed data
     and decide the result
     '''
-    feature_extraction(bigrams)
+    feature_extraction(bigrams, words)
 
-def feature_extraction(bigrams):
+
+def logistic_regression(X_train, y_train, X_test, y_test):
+    ngram_range = (1, 2)
+    max_features = 5000
+    vectorizer = TfidfVectorizer(ngram_range=(1,2), max_features=5000)
+    X_train_vectorized = vectorizer.fit_transform(X_train)
+    X_test_vectorized = vectorizer.transform(X_test)
+
+    model = LogisticRegression(class_weight='balanced')
+    model.fit(X_train_vectorized, y_train)
+    model.predict(X_test_vectorized)
+    accuracy = model.score(X_test_vectorized, y_test) * 100
+    with open('vectorizer.pkl', 'wb') as file:
+        pickle.dump(vectorizer, file)
+        print("Vectorizer saved successfully!")
+    # 2. Save the trained model
+    with open('model.pkl', 'wb') as file:
+        pickle.dump(model, file)
+        print("Model saved successfully!")
+    print(accuracy)
+
+    return model
+
+def feature_extraction(bigrams, words):
     # Load the dataset
     df = pd.read_csv(DATA_PATH)
 
@@ -116,23 +183,7 @@ def feature_extraction(bigrams):
     # Extract only tweet and label columns
     df_subset = df[['tweet', 'label']].copy()
 
-    # Clean tweets function
-    def clean_tweet(text):
-        # Remove usernames (@username)
-        text = re.sub(r'@\w+', '', text)
-        # Remove URLs
-        text = re.sub(r'http\S+', '', text)
-        # Remove HTML entities
-        text = re.sub(r'&#?\w+;', '', text)
-        # Remove punctuation and special characters
-        text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
-        # Remove extra whitespace
-        text = re.sub(r'\s+', ' ', text).strip()
-        # Remove retweets (text starting with "rt")
-        if text.startswith('RT '):
-            text = ''
-        text = text.lower()
-        return text
+    # We use the global clean_tweet function defined above instead.
     
     # Apply cleaning to tweets
     df_subset['tweet'] = df_subset['tweet'].apply(clean_tweet)
@@ -141,12 +192,13 @@ def feature_extraction(bigrams):
     X = df_subset["tweet"]
     y = df["label"]
 
+    # Split the data 80/20, this will result in the best value from your trained data with the testing data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    X_train
-    X_test
-    y_train
-    y_test
-    
+    # I will use logistical regression to train a model that will predict wether a sentence is accepted or not
+    model = logistic_regression(X_train, y_train, X_test, y_test)
+    # Model predictions are now handled directly inside the global sentence() function!
+
     return df_subset
 
 
