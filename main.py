@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, render_template, request
-from logic.check import check_text
+from logic.check import check_text, save_feedback
 
 app = Flask(__name__, template_folder="www")
 
@@ -19,6 +19,18 @@ def moderate():
     else:
         result = "ko"
     return jsonify({"result": result})
+
+@app.route("/feedback", methods=["POST"])
+def feedback():
+    data = request.get_json(silent=True) or {}
+    text = (data.get("text") or "").strip()
+    original_result = (data.get("original_result") or "").lower()
+    
+    if text and original_result in ["ok", "ko"]:
+        save_feedback(text, original_result)
+        return jsonify({"status": "success"})
+    
+    return jsonify({"status": "error", "message": "Invalid input"}), 400
 
 if __name__ == "__main__":
     app.run(debug=True)

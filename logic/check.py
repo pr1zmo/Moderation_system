@@ -45,6 +45,23 @@ for canonical, variations in LOOKALIKE_GROUPS.items():
 #     for i, line in enumerate(reader):
 #         print 'line[{}] = {}'.format(i, line)
 
+def save_feedback(text: str, original_result: str):
+    """
+    Saves feedback from the UI into a CSV file for future model retraining.
+    Since the user clicked "Incorrect", the true label is the opposite of original_result.
+    If original_result is "ok" (Clean=0), true label is "1" (Offensive).
+    If original_result is "ko" (Offensive=1), true label is "0" (Clean).
+    """
+    feedback_file = "data/feedback.csv"
+    label = "1" if original_result == "ok" else "0"
+    
+    file_exists = os.path.exists(feedback_file)
+    with open(feedback_file, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["label", "tweet"])
+        writer.writerow([label, text])
+
 def check_text(text: str) -> bool:
     # Placeholder for actual moderation logic
     # For demonstration, let's assume any text containing "bad" is not ok
@@ -111,8 +128,10 @@ def sentence(text) -> bool:
     """
     vec, mod = get_model()
     if vec is None or mod is None:
-        # Fallback if model isn't trained yet
-        return True
+        # If the model isn't trained yet, train it and set vec, mod
+        preprocessing(text)
+        vec, mod = get_model()
+        # return True
         
     cleaned = clean_tweet(text)
     X_test = vec.transform([cleaned])
@@ -143,7 +162,6 @@ def tokenize(words: list):
         if i < len(words) - 1:
             bigrams.append(words[i] + " " + words[i + 1])
 
-
     '''
     Split the sentence into words, will use that to better pair those words with the preprocessed data
     and decide the result
@@ -152,9 +170,7 @@ def tokenize(words: list):
 
 
 def logistic_regression(X_train, y_train, X_test, y_test):
-    ngram_range = (1, 2)
-    max_features = 5000
-    vectorizer = TfidfVectorizer(ngram_range=(1,2), max_features=5000)
+    vectorizer = TfidfVectorizer(ngram_range=(1,2), max_features=10000)
     X_train_vectorized = vectorizer.fit_transform(X_train)
     X_test_vectorized = vectorizer.transform(X_test)
 
@@ -162,13 +178,15 @@ def logistic_regression(X_train, y_train, X_test, y_test):
     model.fit(X_train_vectorized, y_train)
     model.predict(X_test_vectorized)
     accuracy = model.score(X_test_vectorized, y_test) * 100
+
     with open('vectorizer.pkl', 'wb') as file:
         pickle.dump(vectorizer, file)
         print("Vectorizer saved successfully!")
-    # 2. Save the trained model
+
     with open('model.pkl', 'wb') as file:
         pickle.dump(model, file)
         print("Model saved successfully!")
+
     print(accuracy)
 
     return model
@@ -180,28 +198,23 @@ def feature_extraction(bigrams, words):
     # Create binary label: 1 if offensive or hate speech (class 0 or 1), 0 if neither (class 2)
     df['label'] = (df['class'] != 2).astype(int)
 
-    # Extract only tweet and label columns
+    # 
     df_subset = df[['tweet', 'label']].copy()
 
-    # We use the global clean_tweet function defined above instead.
-    
-    # Apply cleaning to tweets
     df_subset['tweet'] = df_subset['tweet'].apply(clean_tweet)
-    
-    # Display the cleaned data with labels
+
     X = df_subset["tweet"]
     y = df["label"]
 
-    # Split the data 80/20, this will result in the best value from your trained data with the testing data
+    # split the dataset 80/20 to train and test the model
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # I will use logistical regression to train a model that will predict wether a sentence is accepted or not
     model = logistic_regression(X_train, y_train, X_test, y_test)
-    # Model predictions are now handled directly inside the global sentence() function!
 
     return df_subset
 
-
+def retrain(X_train, y_train, X_test, y_test):
+    pass
 
 def scoring(text: str, score: int) -> int:
     return score

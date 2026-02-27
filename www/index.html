@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Moderation System</title>
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap");
+
         :root {
             color-scheme: dark;
             --bg-0: #0b0f14;
@@ -21,14 +23,17 @@
             --ok: #6ee7b7;
             --ko: #fb7185;
         }
+
         * {
             box-sizing: border-box;
         }
+
         html,
         body {
             height: 100%;
             margin: 0;
         }
+
         body {
             font-family: "Space Grotesk", sans-serif;
             display: flex;
@@ -41,6 +46,7 @@
                 radial-gradient(600px 300px at 110% 10%, #1a2f45 0%, transparent 55%),
                 linear-gradient(160deg, var(--bg-1) 0%, var(--bg-0) 45%, var(--bg-2) 100%);
         }
+
         .container {
             width: 100%;
             max-width: 520px;
@@ -52,17 +58,20 @@
             position: relative;
             z-index: 1;
         }
+
         h1 {
             margin: 0 0 16px;
             font-weight: 700;
             letter-spacing: 0.3px;
         }
+
         label {
             display: block;
             margin-bottom: 8px;
             color: var(--muted);
             font-size: 0.95rem;
         }
+
         input {
             width: 100%;
             padding: 12px 14px;
@@ -74,13 +83,16 @@
             font-size: 1rem;
             outline: none;
         }
+
         input:focus {
             border-color: #2f4461;
             box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
         }
+
         input::placeholder {
             color: var(--muted);
         }
+
         button {
             width: 100%;
             padding: 12px 14px;
@@ -95,13 +107,16 @@
             transition: transform 180ms ease, box-shadow 200ms ease;
             animation: shimmer 3.5s ease infinite;
         }
+
         button:hover {
             transform: translateY(-1px) scale(1.01);
             box-shadow: 0 10px 22px rgba(59, 130, 246, 0.35);
         }
+
         button:active {
             transform: translateY(0) scale(0.99);
         }
+
         #result {
             margin-top: 16px;
             padding-left: 14px;
@@ -109,11 +124,30 @@
             font-size: 1.05rem;
             font-weight: 700;
         }
+
         #result.ok {
             color: var(--ok);
         }
+
         #result.ko {
             color: var(--ko);
+        }
+
+        #feedback-btn {
+            display: none;
+            margin-top: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            animation: none;
+            font-size: 0.9rem;
+            padding: 8px;
+        }
+
+        #feedback-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            box-shadow: none;
         }
 
         /* ── full-screen watermark overlay ── */
@@ -137,21 +171,26 @@
             opacity: 1;
             transform: translateX(0);
         }
+
         #bg-watermark .watermark-text {
             font-size: clamp(14rem, 45vw, 42rem);
             font-weight: 900;
             letter-spacing: 0.05em;
             user-select: none;
         }
+
         #bg-watermark.ok {
             background: radial-gradient(circle at 50% 50%, rgba(110, 231, 183, 0.12) 0%, transparent 70%);
         }
+
         #bg-watermark.ok .watermark-text {
             color: rgba(110, 231, 183, 0.14);
         }
+
         #bg-watermark.ko {
             background: radial-gradient(circle at 50% 50%, rgba(251, 113, 133, 0.12) 0%, transparent 70%);
         }
+
         #bg-watermark.ko .watermark-text {
             color: rgba(251, 113, 133, 0.14);
         }
@@ -160,15 +199,18 @@
             0% {
                 background-position: 0% 50%;
             }
+
             50% {
                 background-position: 100% 50%;
             }
+
             100% {
                 background-position: 0% 50%;
             }
         }
     </style>
 </head>
+
 <body>
     <!-- full-screen watermark -->
     <div id="bg-watermark">
@@ -183,6 +225,9 @@
             <button type="submit">Check</button>
         </form>
         <div id="result" style="display: none"></div>
+        <button id="feedback-btn">Incorrect? Click to Dislike</button>
+        <div id="feedback-msg" style="display: none; margin-top: 12px; color: var(--ok); font-size: 0.9rem;">Thank you
+            for your feedback!</div>
     </div>
 
     <script>
@@ -190,6 +235,11 @@
         const resultDiv = document.getElementById('result');
         const watermark = document.getElementById('bg-watermark');
         const watermarkText = watermark.querySelector('.watermark-text');
+        const feedbackBtn = document.getElementById('feedback-btn');
+        const feedbackMsg = document.getElementById('feedback-msg');
+
+        let lastInput = '';
+        let lastResult = '';
 
         function showResult(result) {
             const cls = result === 'OK' ? 'ok' : 'ko';
@@ -208,11 +258,16 @@
             watermark.style.transition = '';
             watermarkText.textContent = result;
             watermark.classList.add(cls, 'visible');
+
+            // Show feedback button
+            feedbackBtn.style.display = 'block';
+            feedbackMsg.style.display = 'none';
         }
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
             const input = document.getElementById('inputText').value;
+            lastInput = input;
 
             try {
                 const response = await fetch('/moderate', {
@@ -224,12 +279,35 @@
                 });
 
                 const data = await response.json();
-                showResult((data.result || 'KO').toUpperCase());
+                lastResult = (data.result || 'ko').toLowerCase();
+                showResult(lastResult.toUpperCase());
             } catch (error) {
                 console.error('Error:', error);
+                lastResult = 'ko';
                 showResult('KO');
+            }
+        });
+
+        feedbackBtn.addEventListener('click', async () => {
+            try {
+                await fetch('/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: lastInput,
+                        original_result: lastResult
+                    })
+                });
+
+                feedbackBtn.style.display = 'none';
+                feedbackMsg.style.display = 'block';
+            } catch (error) {
+                console.error('Error sending feedback:', error);
             }
         });
     </script>
 </body>
+
 </html>
