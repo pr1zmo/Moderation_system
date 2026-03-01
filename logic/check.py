@@ -149,7 +149,11 @@ def sentence(text) -> bool:
 	prediction = mod.predict(X_test)[0]
 	if prediction == 0:
 		for word in cleaned.split():
-			if one_word(word):
+			print(word)
+			if not one_word(word):
+				print("Found offensive word in sentence, blocking: ", word)
+				# print("Found clean word in sentence, allowing: ", word)
+				# print("Original sentence: ", text)
 				write_toFeedback(cleaned, "1", FEEDBACK)
 				return False
 	return prediction == 0
