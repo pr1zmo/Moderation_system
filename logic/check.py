@@ -113,7 +113,7 @@ def get_model():
 		base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 		vec_path = os.path.join(base_dir, 'vectorizer.pkl')
 		model_path = os.path.join(base_dir, 'model.pkl')
-		
+
 		if os.path.exists(vec_path) and os.path.exists(model_path):
 			with open(vec_path, 'rb') as file:
 				loaded_vectorizer = pickle.load(file)
@@ -148,14 +148,22 @@ def sentence(text) -> bool:
 	X_test = vec.transform([cleaned])
 	prediction = mod.predict(X_test)[0]
 	if prediction == 0:
+		print("Into the prediction")
 		for word in cleaned.split():
-			print(word)
 			if not one_word(word):
-				print("Found offensive word in sentence, blocking: ", word)
 				# print("Found clean word in sentence, allowing: ", word)
 				# print("Original sentence: ", text)
 				write_toFeedback(cleaned, "1", FEEDBACK)
 				return False
+
+	with open(FEEDBACK, "r") as f:
+		feedback_lines = f.readlines()
+		if len(feedback_lines) > 6:  # Header + 5 feedback entries
+			new_prediction = retrain()
+			# Clear feedback except header
+			with open(FEEDBACK, "w") as f_clear:
+				f_clear.write(feedback_lines[0])  # Keep header only
+			return new_prediction == 0
 	return prediction == 0
 
 def preprocessing(text):
@@ -233,8 +241,33 @@ def feature_extraction(bigrams, words):
 
 	return df_subset
 
-def retrain(X_train, y_train, X_test, y_test):
-	pass
+'''
+# Source - https://stackoverflow.com/a/8858026
+# Posted by ig0774, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-03-04, License - CC BY-SA 4.0
+
+import os
+import shutil
+
+os.rename("path/to/current/file.foo", "path/to/new/destination/for/file.foo")
+os.replace("path/to/current/file.foo", "path/to/new/destination/for/file.foo")
+shutil.move("path/to/current/file.foo", "path/to/new/destination/for/file.foo")
+
+'''
+
+def retrain():
+	# print("Retraining")
+	# os.rename("model.pkl", "model-v2.pkl")
+	# os.rename("vectorizer.pkl", "vectorizer-v2.pkl")
+	# preprocessing(text)
+	# vec, mod = get_model()
+		
+	# cleaned = clean_tweet(text)
+	# X_test = vec.transform([cleaned])
+	# prediction = mod.predict(X_test)[0]
+	# return prediction
+	return 1
+
 
 def scoring(text: str, score: int) -> int:
 	return score
