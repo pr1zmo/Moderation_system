@@ -47,4 +47,4 @@ python main.py
 ### 4. Head to the Web Interface
 Open your web browser and navigate to `http://localhost:5000`. You will see a simple interface where you can input text and get an instant prediction on whether it is safe or offensive.
 
-*The model learns from your feedback! If you click on the "Report" button for any text, it will be added to the training dataset, allowing the system to improve over time.*
+*The model learns from your feedback! If you click on the "Incorrect" button for any text, it will be added to the training dataset, allowing the system to improve over time.*
