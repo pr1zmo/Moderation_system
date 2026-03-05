@@ -27,6 +27,7 @@ test*
 
 *.pkl
 *.ini
+*.csv
 
 .vscode
 promethious.py

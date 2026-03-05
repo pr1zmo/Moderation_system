@@ -7,6 +7,7 @@ import os
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
+from .append_file import append_file_contents
 
 i_la = ["|", "1", "!", "í", "ì", "î", "ï"]
 a_la = ["4", "@", "á", "à", "â", "ä"]
@@ -159,7 +160,8 @@ def sentence(text) -> bool:
 	with open(FEEDBACK, "r") as f:
 		feedback_lines = f.readlines()
 		if len(feedback_lines) > 6:  # Header + 5 feedback entries
-			new_prediction = retrain()
+			new_prediction = retrain(text)
+			append_file_contents(FEEDBACK, DATA_PATH)
 			# Clear feedback except header
 			with open(FEEDBACK, "w") as f_clear:
 				f_clear.write(feedback_lines[0])  # Keep header only
@@ -255,18 +257,18 @@ shutil.move("path/to/current/file.foo", "path/to/new/destination/for/file.foo")
 
 '''
 
-def retrain():
-	# print("Retraining")
-	# os.rename("model.pkl", "model-v2.pkl")
-	# os.rename("vectorizer.pkl", "vectorizer-v2.pkl")
-	# preprocessing(text)
-	# vec, mod = get_model()
+def retrain(text):
+	print("Retraining")
+	os.rename("model.pkl", "model-v2.pkl")
+	os.rename("vectorizer.pkl", "vectorizer-v2.pkl")
+
+	preprocessing(text)
+	vec, mod = get_model()
 		
-	# cleaned = clean_tweet(text)
-	# X_test = vec.transform([cleaned])
-	# prediction = mod.predict(X_test)[0]
-	# return prediction
-	return 1
+	cleaned = clean_tweet(text)
+	X_test = vec.transform([cleaned])
+	prediction = mod.predict(X_test)[0]
+	return prediction
 
 
 def scoring(text: str, score: int) -> int:
