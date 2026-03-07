@@ -6,22 +6,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Moderation System</title>
     <style>
-        @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap");
 
         :root {
             color-scheme: dark;
-            --bg-0: #0b0f14;
-            --bg-1: #0b1220;
-            --bg-2: #111a2b;
-            --panel: #111826;
-            --border: #233044;
-            --text: #e6edf3;
-            --muted: #9fb0c3;
-            --accent-1: #38bdf8;
-            --accent-2: #3b82f6;
-            --accent-3: #6366f1;
-            --ok: #6ee7b7;
-            --ko: #fb7185;
+            --bg-0: #05070b;
+            --bg-1: #0b1020;
+            --bg-2: #0f172d;
+            --panel: rgba(9, 14, 28, 0.76);
+            --panel-strong: rgba(16, 24, 43, 0.92);
+            --panel-soft: rgba(255, 255, 255, 0.04);
+            --border: rgba(151, 164, 190, 0.18);
+            --border-strong: rgba(151, 164, 190, 0.28);
+            --text: #eef2ff;
+            --muted: #98a6c1;
+            --accent-1: #86efac;
+            --accent-2: #38bdf8;
+            --accent-3: #60a5fa;
+            --ok: #7ef0bd;
+            --ko: #ff7c97;
+            --shadow: 0 30px 80px rgba(0, 0, 0, 0.48);
+            --radius-xl: 30px;
+            --radius-lg: 22px;
+            --radius-md: 16px;
         }
 
         * {
@@ -30,244 +37,959 @@
 
         html,
         body {
-            height: 100%;
+            min-height: 100%;
             margin: 0;
         }
 
         body {
-            font-family: "Space Grotesk", sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
+            font-family: "Manrope", sans-serif;
             color: var(--text);
             background:
-                radial-gradient(800px 400px at 10% -10%, #1e2a3e 0%, transparent 60%),
-                radial-gradient(600px 300px at 110% 10%, #1a2f45 0%, transparent 55%),
-                linear-gradient(160deg, var(--bg-1) 0%, var(--bg-0) 45%, var(--bg-2) 100%);
+                radial-gradient(circle at 12% 18%, rgba(56, 189, 248, 0.14), transparent 26%),
+                radial-gradient(circle at 82% 12%, rgba(134, 239, 172, 0.12), transparent 24%),
+                radial-gradient(circle at 50% 100%, rgba(96, 165, 250, 0.1), transparent 34%),
+                linear-gradient(135deg, var(--bg-0) 0%, var(--bg-1) 45%, var(--bg-2) 100%);
+            overflow-x: hidden;
         }
 
-        .container {
-            width: 100%;
-            max-width: 520px;
-            border: 1px solid var(--border);
-            background: linear-gradient(180deg, #0f1623 0%, var(--panel) 100%);
-            padding: 24px;
-            border-radius: 14px;
-            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            inset: auto;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(18px);
+            animation: drift 18s ease-in-out infinite;
+        }
+
+        body::before {
+            top: 8%;
+            left: -8%;
+            width: 34rem;
+            height: 34rem;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, rgba(56, 189, 248, 0) 68%);
+        }
+
+        body::after {
+            right: -10%;
+            bottom: -8%;
+            width: 30rem;
+            height: 30rem;
+            background: radial-gradient(circle, rgba(134, 239, 172, 0.14) 0%, rgba(134, 239, 172, 0) 70%);
+            animation-duration: 22s;
+            animation-direction: reverse;
+        }
+
+        .page {
             position: relative;
             z-index: 1;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 40px 24px;
+        }
+
+        .page::before {
+            content: "";
+            position: absolute;
+            inset: 20px;
+            border-radius: 36px;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+            background-size: 84px 84px;
+            mask-image: radial-gradient(circle at center, black 46%, transparent 88%);
+            opacity: 0.28;
+            pointer-events: none;
+        }
+
+        .shell {
+            width: min(1120px, 100%);
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(380px, 0.95fr);
+            gap: 28px;
+            align-items: stretch;
+        }
+
+        .panel {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            background: linear-gradient(180deg, rgba(16, 24, 43, 0.8) 0%, rgba(9, 14, 28, 0.88) 100%);
+            backdrop-filter: blur(24px);
+            box-shadow: var(--shadow);
+        }
+
+        .panel::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0));
+            pointer-events: none;
+        }
+
+        .hero {
+            padding: 38px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 640px;
+        }
+
+        .hero-copy,
+        .form-panel,
+        .signal-card,
+        .metric,
+        .result-panel {
+            opacity: 0;
+            transform: translateY(18px);
+            animation: rise-in 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .form-panel {
+            animation-delay: 90ms;
+        }
+
+        .signal-card {
+            animation-delay: 160ms;
+        }
+
+        .metric:nth-child(1) {
+            animation-delay: 220ms;
+        }
+
+        .metric:nth-child(2) {
+            animation-delay: 280ms;
+        }
+
+        .metric:nth-child(3) {
+            animation-delay: 340ms;
+        }
+
+        .eyebrow {
+            width: fit-content;
+            margin-bottom: 20px;
+            padding: 8px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #d5def6;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
         }
 
         h1 {
-            margin: 0 0 16px;
-            font-weight: 700;
-            letter-spacing: 0.3px;
+            margin: 0;
+            font-family: "Sora", sans-serif;
+            font-size: clamp(2.7rem, 5vw, 4.9rem);
+            line-height: 0.98;
+            letter-spacing: -0.05em;
+            max-width: 10ch;
         }
 
-        label {
-            display: block;
-            margin-bottom: 8px;
+        .hero-copy p {
+            margin: 18px 0 0;
+            max-width: 56ch;
             color: var(--muted);
+            font-size: 1.03rem;
+            line-height: 1.7;
+        }
+
+        .signal-card {
+            position: relative;
+            display: grid;
+            gap: 18px;
+            padding: 24px;
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025));
+        }
+
+        .signal-card::after {
+            content: "";
+            position: absolute;
+            inset: -40% auto auto 10%;
+            width: 60%;
+            height: 160%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 34%);
+            opacity: 0.38;
+            transform: rotate(22deg);
+        }
+
+        .signal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .signal-title {
+            font-size: 0.88rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: rgba(126, 240, 189, 0.1);
+            color: #c7ffe2;
+            font-size: 0.83rem;
+            font-weight: 700;
+        }
+
+        .status-pill::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 0 0 rgba(199, 255, 226, 0.55);
+            animation: pulse 2.4s infinite;
+        }
+
+        .signal-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .metric {
+            padding: 16px;
+            border-radius: 18px;
+            background: rgba(5, 9, 19, 0.52);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .metric strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 1.05rem;
+            color: var(--text);
+        }
+
+        .metric span {
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.45;
+        }
+
+        .form-panel {
+            padding: 26px;
+            display: grid;
+            gap: 22px;
+            align-self: center;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+        }
+
+        .panel-head h2 {
+            margin: 0 0 6px;
+            font-family: "Sora", sans-serif;
+            font-size: 1.45rem;
+            letter-spacing: -0.03em;
+        }
+
+        .panel-head p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.6;
             font-size: 0.95rem;
         }
 
-        input {
+        .panel-chip {
+            padding: 10px 12px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #dbeafe;
+            font-size: 0.84rem;
+            line-height: 1.4;
+            text-align: right;
+        }
+
+        form {
+            display: grid;
+            gap: 18px;
+        }
+
+        label {
+            display: inline-block;
+            margin-bottom: 10px;
+            color: #dce7fd;
+            font-size: 0.92rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        textarea {
             width: 100%;
-            padding: 12px 14px;
-            margin-bottom: 12px;
+            min-height: 172px;
+            resize: vertical;
+            padding: 16px 18px;
+            border-radius: 20px;
             border: 1px solid var(--border);
-            border-radius: 10px;
-            background: #0c121c;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03)),
+                rgba(6, 10, 20, 0.88);
             color: var(--text);
+            font: inherit;
             font-size: 1rem;
+            line-height: 1.65;
             outline: none;
+            transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
         }
 
-        input:focus {
-            border-color: #2f4461;
-            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+        textarea::placeholder {
+            color: #71829f;
         }
 
-        input::placeholder {
-            color: var(--muted);
+        textarea:focus {
+            border-color: rgba(96, 165, 250, 0.5);
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            transform: translateY(-1px);
+        }
+
+        .action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
         }
 
         button {
-            width: 100%;
-            padding: 12px 14px;
-            border: none;
-            border-radius: 10px;
-            color: #06121f;
-            font-weight: 700;
-            letter-spacing: 0.3px;
+            appearance: none;
+            border: 0;
+            font: inherit;
             cursor: pointer;
-            background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3));
-            background-size: 200% 100%;
-            transition: transform 180ms ease, box-shadow 200ms ease;
-            animation: shimmer 3.5s ease infinite;
+            transition: transform 180ms ease, box-shadow 220ms ease, border-color 180ms ease, background 180ms ease;
         }
 
-        button:hover {
-            transform: translateY(-1px) scale(1.01);
-            box-shadow: 0 10px 22px rgba(59, 130, 246, 0.35);
+        .primary-btn {
+            position: relative;
+            flex: 1 1 240px;
+            overflow: hidden;
+            padding: 16px 22px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, var(--accent-1) 0%, var(--accent-2) 50%, var(--accent-3) 100%);
+            color: #03111e;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            box-shadow: 0 20px 32px rgba(56, 189, 248, 0.18);
         }
 
-        button:active {
-            transform: translateY(0) scale(0.99);
+        .primary-btn::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(115deg, transparent 25%, rgba(255, 255, 255, 0.42) 50%, transparent 75%);
+            transform: translateX(-130%);
+        }
+
+        .primary-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 26px 42px rgba(56, 189, 248, 0.26);
+        }
+
+        .primary-btn:hover::before {
+            animation: sweep 900ms ease;
+        }
+
+        .primary-btn:active {
+            transform: translateY(0);
+        }
+
+        .primary-btn.is-loading {
+            color: rgba(3, 17, 30, 0.76);
+            pointer-events: none;
+            filter: saturate(0.85);
+        }
+
+        .secondary-btn {
+            display: none;
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
+            min-width: 170px;
+        }
+
+        .secondary-btn:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-strong);
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .note {
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.6;
+        }
+
+        .result-panel {
+            position: relative;
+            display: none;
+            overflow: hidden;
+            padding: 22px;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease;
+        }
+
+        .result-panel::before {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            background: linear-gradient(120deg, rgba(255, 255, 255, 0.18), transparent 35%, transparent 65%, rgba(255, 255, 255, 0.08));
+            opacity: 0.35;
+            pointer-events: none;
+        }
+
+        .result-panel.ok {
+            border-color: rgba(126, 240, 189, 0.26);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 14px 32px rgba(126, 240, 189, 0.09);
+        }
+
+        .result-panel.ko {
+            border-color: rgba(255, 124, 151, 0.28);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 14px 32px rgba(255, 124, 151, 0.1);
+        }
+
+        .result-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 16px;
+        }
+
+        .result-label {
+            font-size: 0.82rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+
+        .result-state {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .result-panel.ok .result-state {
+            color: #d5ffea;
+            background: rgba(126, 240, 189, 0.12);
+        }
+
+        .result-panel.ko .result-state {
+            color: #ffd0da;
+            background: rgba(255, 124, 151, 0.12);
         }
 
         #result {
-            margin-top: 16px;
-            padding-left: 14px;
-            min-height: 28px;
-            font-size: 1.05rem;
-            font-weight: 700;
+            margin: 0;
+            font-family: "Sora", sans-serif;
+            font-size: clamp(2.4rem, 8vw, 4.2rem);
+            line-height: 1;
+            letter-spacing: -0.06em;
         }
 
-        #result.ok {
+        .result-panel.ok #result {
             color: var(--ok);
         }
 
-        #result.ko {
+        .result-panel.ko #result {
             color: var(--ko);
         }
 
-        #feedback-btn {
-            display: none;
+        .result-copy {
             margin-top: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
             color: var(--muted);
-            animation: none;
-            font-size: 0.9rem;
-            padding: 8px;
+            line-height: 1.7;
+            max-width: 52ch;
         }
 
-        #feedback-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
+        .explanation-box {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: grid;
+            gap: 14px;
+        }
+
+        .explanation-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .explanation-title {
+            font-size: 0.82rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+
+        .explanation-mode {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #d6def1;
+            font-size: 0.78rem;
+            text-transform: capitalize;
+        }
+
+        .explanation-summary {
+            margin: 0;
+            color: #ced9f0;
+            line-height: 1.7;
+        }
+
+        .term-groups {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .term-group {
+            padding: 14px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .term-group h3 {
+            margin: 0 0 12px;
+            font-size: 0.86rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #dbe7ff;
+        }
+
+        .term-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .term-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 999px;
+            font-size: 0.84rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             color: var(--text);
-            box-shadow: none;
         }
 
-        /* ── full-screen watermark overlay ── */
+        .term-chip.flagged {
+            background: rgba(255, 124, 151, 0.1);
+            border-color: rgba(255, 124, 151, 0.16);
+            color: #ffd4de;
+        }
+
+        .term-chip.allowed {
+            background: rgba(126, 240, 189, 0.1);
+            border-color: rgba(126, 240, 189, 0.16);
+            color: #d5ffea;
+        }
+
+        .term-score {
+            opacity: 0.82;
+            font-size: 0.78rem;
+        }
+
+        .empty-terms {
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.55;
+        }
+
+        #feedback-msg {
+            display: none;
+            color: #d7ffee;
+            font-size: 0.92rem;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(126, 240, 189, 0.08);
+            border: 1px solid rgba(126, 240, 189, 0.14);
+        }
+
         #bg-watermark {
             position: fixed;
             inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
+            display: grid;
+            place-items: center;
             pointer-events: none;
             z-index: 0;
-
-            transform: translateX(100%);
-            transition: transform 1.2s ease, opacity 0.6s ease;
             opacity: 0;
+            transform: scale(1.08);
+            transition: opacity 380ms ease, transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-
         #bg-watermark.visible {
-            /* opacity: 1; */
             opacity: 1;
-            transform: translateX(0);
+            transform: scale(1);
         }
 
         #bg-watermark .watermark-text {
-            font-size: clamp(14rem, 45vw, 42rem);
-            font-weight: 900;
-            letter-spacing: 0.05em;
+            font-family: "Sora", sans-serif;
+            font-size: clamp(9rem, 28vw, 24rem);
+            font-weight: 700;
+            letter-spacing: -0.08em;
             user-select: none;
+            filter: blur(1px);
         }
 
         #bg-watermark.ok {
-            background: radial-gradient(circle at 50% 50%, rgba(110, 231, 183, 0.12) 0%, transparent 70%);
+            background: radial-gradient(circle at center, rgba(126, 240, 189, 0.08), transparent 56%);
         }
 
         #bg-watermark.ok .watermark-text {
-            color: rgba(110, 231, 183, 0.14);
+            color: rgba(126, 240, 189, 0.09);
         }
 
         #bg-watermark.ko {
-            background: radial-gradient(circle at 50% 50%, rgba(251, 113, 133, 0.12) 0%, transparent 70%);
+            background: radial-gradient(circle at center, rgba(255, 124, 151, 0.08), transparent 56%);
         }
 
         #bg-watermark.ko .watermark-text {
-            color: rgba(251, 113, 133, 0.14);
+            color: rgba(255, 124, 151, 0.09);
         }
 
-        @keyframes shimmer {
-            0% {
-                background-position: 0% 50%;
+        @keyframes rise-in {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes drift {
+            0%,
+            100% {
+                transform: translate3d(0, 0, 0) scale(1);
             }
 
             50% {
-                background-position: 100% 50%;
+                transform: translate3d(32px, -18px, 0) scale(1.05);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(199, 255, 226, 0.55);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(199, 255, 226, 0);
             }
 
             100% {
-                background-position: 0% 50%;
+                box-shadow: 0 0 0 0 rgba(199, 255, 226, 0);
+            }
+        }
+
+        @keyframes sweep {
+            from {
+                transform: translateX(-130%);
+            }
+
+            to {
+                transform: translateX(130%);
+            }
+        }
+
+        @media (max-width: 980px) {
+            .shell {
+                grid-template-columns: 1fr;
+            }
+
+            .hero {
+                min-height: auto;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .page {
+                padding: 20px 14px;
+            }
+
+            .page::before {
+                inset: 12px;
+                background-size: 56px 56px;
+            }
+
+            .hero,
+            .form-panel {
+                padding: 22px;
+            }
+
+            .signal-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .term-groups {
+                grid-template-columns: 1fr;
+            }
+
+            .panel-head {
+                flex-direction: column;
+            }
+
+            .panel-chip {
+                text-align: left;
+            }
+
+            .action-row {
+                flex-direction: column;
+            }
+
+            .primary-btn,
+            .secondary-btn {
+                width: 100%;
+            }
+
+            #bg-watermark .watermark-text {
+                font-size: clamp(7rem, 34vw, 12rem);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation: none !important;
+                transition: none !important;
+                scroll-behavior: auto !important;
             }
         }
     </style>
 </head>
 
 <body>
-    <!-- full-screen watermark -->
     <div id="bg-watermark">
         <span class="watermark-text"></span>
     </div>
 
-    <div class="container">
-        <h1>Moderation System</h1>
-        <form id="moderationForm">
-            <label for="inputText">Text to moderate</label>
-            <input id="inputText" name="text" placeholder="Enter text to moderate..." required />
-            <button type="submit">Check</button>
-        </form>
-        <div id="result" style="display: none"></div>
-        <button id="feedback-btn">Incorrect? Click to Dislike</button>
-        <div id="feedback-msg" style="display: none; margin-top: 12px; color: var(--ok); font-size: 0.9rem;">Thank you
-            for your feedback!</div>
-    </div>
+    <main class="page">
+        <section class="shell">
+            <article class="panel hero">
+                <div class="hero-copy">
+                    <div class="eyebrow">Trust Layer</div>
+                    <h1>Moderation, designed to feel decisive.</h1>
+                    <p>
+                        A darker, more composed moderation surface for quick text checks. The interface now leans into
+                        cinematic contrast, softer glass layers, and clearer state feedback without changing your backend flow.
+                    </p>
+                </div>
+
+                <div class="signal-card">
+                    <div class="signal-header">
+                        <div>
+                            <div class="signal-title">System posture</div>
+                        </div>
+                        <div class="status-pill">Live analysis</div>
+                    </div>
+
+                    <div class="signal-grid">
+                        <div class="metric">
+                            <strong>Instant pass/fail</strong>
+                            <span>Output states are sharper, larger, and easier to scan.</span>
+                        </div>
+                        <div class="metric">
+                            <strong>Feedback loop</strong>
+                            <span>Incorrect classifications remain one click away.</span>
+                        </div>
+                        <div class="metric">
+                            <strong>Premium motion</strong>
+                            <span>Ambient background drift and more intentional transitions.</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="panel form-panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Run a moderation check</h2>
+                        <p>Paste a sentence, comment, or message below to classify it against the current moderation logic.</p>
+                    </div>
+                    <div class="panel-chip">
+                        Dark mode<br>
+                        premium refresh
+                    </div>
+                </div>
+
+                <form id="moderationForm">
+                    <div>
+                        <label for="inputText">Text to moderate</label>
+                        <textarea id="inputText" name="text" placeholder="Paste content here and run a moderation check..." required></textarea>
+                    </div>
+
+                    <div class="action-row">
+                        <button id="submit-btn" class="primary-btn" type="submit">Analyze content</button>
+                        <button id="feedback-btn" class="secondary-btn" type="button">Flag incorrect result</button>
+                    </div>
+
+                    <div class="note">Your existing endpoints remain unchanged. This refresh only updates the interface, motion, and presentation.</div>
+                </form>
+
+                <section id="result-panel" class="result-panel" aria-live="polite">
+                    <div class="result-meta">
+                        <div class="result-label">Classification</div>
+                        <div id="result-state" class="result-state">Awaiting result</div>
+                    </div>
+                    <div id="result"></div>
+                    <p id="result-copy" class="result-copy"></p>
+                    <div id="explanation-box" class="explanation-box" style="display: none;">
+                        <div class="explanation-head">
+                            <div class="explanation-title">Why this result happened</div>
+                            <div id="explanation-mode" class="explanation-mode"></div>
+                        </div>
+                        <p id="explanation-summary" class="explanation-summary"></p>
+                        <div class="term-groups">
+                            <section class="term-group">
+                                <h3>Terms pushing toward flagged</h3>
+                                <div id="flagged-terms" class="term-list"></div>
+                            </section>
+                            <section class="term-group">
+                                <h3>Terms pushing toward allowed</h3>
+                                <div id="allowed-terms" class="term-list"></div>
+                            </section>
+                        </div>
+                    </div>
+                </section>
+
+                <div id="feedback-msg">Feedback captured. This sample has been marked for review.</div>
+            </article>
+        </section>
+    </main>
 
     <script>
         const form = document.getElementById('moderationForm');
         const resultDiv = document.getElementById('result');
+        const resultPanel = document.getElementById('result-panel');
+        const resultState = document.getElementById('result-state');
+        const resultCopy = document.getElementById('result-copy');
+        const explanationBox = document.getElementById('explanation-box');
+        const explanationMode = document.getElementById('explanation-mode');
+        const explanationSummary = document.getElementById('explanation-summary');
+        const flaggedTerms = document.getElementById('flagged-terms');
+        const allowedTerms = document.getElementById('allowed-terms');
         const watermark = document.getElementById('bg-watermark');
         const watermarkText = watermark.querySelector('.watermark-text');
         const feedbackBtn = document.getElementById('feedback-btn');
         const feedbackMsg = document.getElementById('feedback-msg');
+        const submitBtn = document.getElementById('submit-btn');
 
         let lastInput = '';
         let lastResult = '';
 
-        function showResult(result) {
+        function renderTerms(container, terms, variant) {
+            container.innerHTML = '';
+
+            if (!terms || terms.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'empty-terms';
+                empty.textContent = 'No strong term-level signals were available for this side of the decision.';
+                container.appendChild(empty);
+                return;
+            }
+
+            terms.forEach((item) => {
+                const chip = document.createElement('div');
+                chip.className = `term-chip ${variant}`;
+                chip.innerHTML = `<span>${item.term}</span><span class="term-score">${item.score}</span>`;
+                container.appendChild(chip);
+            });
+        }
+
+        function showExplanation(explanation) {
+            if (!explanation) {
+                explanationBox.style.display = 'none';
+                return;
+            }
+
+            explanationMode.textContent = (explanation.mode || 'analysis').replace('_', ' ');
+            explanationSummary.textContent = explanation.summary || 'No explanation is currently available.';
+            renderTerms(flaggedTerms, explanation.flagged_terms, 'flagged');
+            renderTerms(allowedTerms, explanation.allowed_terms, 'allowed');
+            explanationBox.style.display = 'grid';
+        }
+
+        function showResult(result, explanation) {
             const cls = result === 'OK' ? 'ok' : 'ko';
+            const copy = result === 'OK'
+                ? 'This submission passed the current moderation check and appears safe under the configured rules.'
+                : 'This submission was flagged by the current moderation check and may require intervention.';
+            const stateText = result === 'OK' ? 'Approved' : 'Flagged';
 
-            // small inline result
             resultDiv.textContent = result;
-            resultDiv.className = cls;
-            resultDiv.style.display = 'block';
+            resultPanel.className = `result-panel ${cls}`;
+            resultPanel.style.display = 'block';
+            resultState.textContent = stateText;
+            resultCopy.textContent = copy;
+            showExplanation(explanation);
 
-            // reset watermark: snap to hidden state immediately
+            resultPanel.style.animation = 'none';
+            void resultPanel.offsetWidth;
+            resultPanel.style.animation = 'rise-in 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards';
+
             watermark.classList.remove('visible', 'ok', 'ko');
             watermark.style.transition = 'none';
-            void watermark.offsetWidth;           // force reflow
+            void watermark.offsetWidth;
 
-            // re-enable transition and trigger fade/slide in
             watermark.style.transition = '';
             watermarkText.textContent = result;
             watermark.classList.add(cls, 'visible');
 
-            // Show feedback button
             feedbackBtn.style.display = 'block';
             feedbackMsg.style.display = 'none';
         }
 
+        function setSubmitting(isSubmitting) {
+            submitBtn.classList.toggle('is-loading', isSubmitting);
+            submitBtn.textContent = isSubmitting ? 'Analyzing...' : 'Analyze content';
+        }
+
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const input = document.getElementById('inputText').value;
+            const input = document.getElementById('inputText').value.trim();
+
+            if (!input) {
+                return;
+            }
+
             lastInput = input;
+            setSubmitting(true);
 
             try {
                 const response = await fetch('/moderate', {
@@ -280,11 +1002,13 @@
 
                 const data = await response.json();
                 lastResult = (data.result || 'ko').toLowerCase();
-                showResult(lastResult.toUpperCase());
+                showResult(lastResult.toUpperCase(), data.explanation || null);
             } catch (error) {
                 console.error('Error:', error);
                 lastResult = 'ko';
-                showResult('KO');
+                showResult('KO', null);
+            } finally {
+                setSubmitting(false);
             }
         });
 

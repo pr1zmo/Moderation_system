@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, render_template, request
+from explain import explain_decision
 from logic.check import check_text, save_feedback
 
 app = Flask(__name__, template_folder="www")
@@ -18,7 +19,8 @@ def moderate():
         result = "ok"
     else:
         result = "ko"
-    return jsonify({"result": result})
+    explanation = explain_decision(text) if text else None
+    return jsonify({"result": result, "explanation": explanation})
 
 @app.route("/feedback", methods=["POST"])
 def feedback():
