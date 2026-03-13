@@ -25,7 +25,7 @@ data/
 Automated-Content-Moderation
 test*
 
-*.pkl
+*v2.pkl
 *.ini
 *.csv
 

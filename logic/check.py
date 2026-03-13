@@ -31,7 +31,11 @@ LOOKALIKE_GROUPS = {
 	"z": z_la,
 }
 
-DATA_PATH = "data/labeled_data.csv"
+# DATA_PATH = "data/labeled_data.csv"
+DATA_PATH_1 = "/goinfre/zelbassa/data/train-00000-of-000002.csv"
+DATA_PATH_2 = "/goinfre/zelbassa/data/train-00001-of-000002.csv"
+TEST_PATH = "/goinfre/zelbassa/data/test-00000-of-000001.csv"
+VALIDATION_PATH = "/goinfre/zelbassa/data/validation-00000-of-000001.csv"
 SINGLE_WORD = "data/single_word.csv"
 PREPROCESSED = "data/preprocessed_data.csv"
 FEEDBACK = "data/feedback.csv"
@@ -200,7 +204,7 @@ def tokenize(words: list):
 
 
 def logistic_regression(X_train, y_train, X_test, y_test):
-	vectorizer = TfidfVectorizer(ngram_range=(1,2), max_features=10000)
+	vectorizer = TfidfVectorizer(ngram_range=(1,2), max_features=6000)
 	X_train_vectorized = vectorizer.fit_transform(X_train)
 	X_test_vectorized = vectorizer.transform(X_test)
 
