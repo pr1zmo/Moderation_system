@@ -5,9 +5,13 @@ import pickle
 import re
 import os
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import SGDClassifier
+# from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import HashingVectorizer
 from .append_file import append_file_contents
+
+# SGDClassifier and HashingVectorizer
 
 i_la = ["|", "1", "!", "í", "ì", "î", "ï"]
 a_la = ["4", "@", "á", "à", "â", "ä"]
@@ -32,10 +36,11 @@ LOOKALIKE_GROUPS = {
 }
 
 # DATA_PATH = "data/labeled_data.csv"
-DATA_PATH_1 = "/goinfre/zelbassa/data/train-00000-of-000002.csv"
-DATA_PATH_2 = "/goinfre/zelbassa/data/train-00001-of-000002.csv"
-TEST_PATH = "/goinfre/zelbassa/data/test-00000-of-000001.csv"
-VALIDATION_PATH = "/goinfre/zelbassa/data/validation-00000-of-000001.csv"
+DATA_PATH = "/goinfre/zelbassa/data"
+DATA_PATH_1 = "{DATA_PATH}/train-2.csv"
+DATA_PATH_2 = "{DATA_PATH}/train-2.csv"
+TEST_PATH = "{DATA_PATH}/test-1.csv"
+VALIDATION_PATH = "{DATA_PATH}/validation-1.csv"
 SINGLE_WORD = "data/single_word.csv"
 PREPROCESSED = "data/preprocessed_data.csv"
 FEEDBACK = "data/feedback.csv"
@@ -50,8 +55,6 @@ for canonical, variations in LOOKALIKE_GROUPS.items():
 #     reader = csv.reader(f, delimiter="\t")
 #     for i, line in enumerate(reader):
 #         print 'line[{}] = {}'.format(i, line)
-
-
 
 def write_toFeedback(text: str, label: str, feedback_file: str):
 	file_exists = os.path.exists(feedback_file)
