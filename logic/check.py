@@ -36,14 +36,16 @@ LOOKALIKE_GROUPS = {
 }
 
 # DATA_PATH = "data/labeled_data.csv"
-DATA_PATH = "/goinfre/zelbassa/data"
-DATA_PATH_1 = "{DATA_PATH}/train-2.csv"
-DATA_PATH_2 = "{DATA_PATH}/train-2.csv"
-TEST_PATH = "{DATA_PATH}/test-1.csv"
-VALIDATION_PATH = "{DATA_PATH}/validation-1.csv"
+DATA_DIR = "/goinfre/zelbassa/data"
+DATA_PATH_1 = f"{DATA_DIR}/train-1.csv"
+DATA_PATH_2 = f"{DATA_DIR}/train-2.csv"
+TEST_PATH = f"{DATA_DIR}/test-1.csv"
+VALIDATION_PATH = f"{DATA_DIR}/validation-1.csv"
+TRAIN_FILES = [DATA_PATH_1, DATA_PATH_2]
 SINGLE_WORD = "data/single_word.csv"
 PREPROCESSED = "data/preprocessed_data.csv"
 FEEDBACK = "data/feedback.csv"
+TOXICITY_THRESHOLD = 0.5
 
 LOOKALIKE_TO_CANON = {}
 for canonical, variations in LOOKALIKE_GROUPS.items():
@@ -92,7 +94,6 @@ def check_text(text: str) -> bool:
 	else:
 		return sentence(text)
 	return True
-
 
 def normalize_lookalikes(text: str) -> str:
 	return "".join(LOOKALIKE_TO_CANON.get(char.lower(), char.lower()) for char in text)
@@ -168,7 +169,7 @@ def sentence(text) -> bool:
 		feedback_lines = f.readlines()
 		if len(feedback_lines) > 6:  # Header + 5 feedback entries
 			new_prediction = retrain(text)
-			append_file_contents(FEEDBACK, DATA_PATH)
+			append_file_contents(FEEDBACK, DATA_PATH_1)
 			# Clear feedback except header
 			with open(FEEDBACK, "w") as f_clear:
 				f_clear.write(feedback_lines[0])  # Keep header only
@@ -191,8 +192,6 @@ def preprocessing(text):
 	# pd.set_option("display.max_colwidth", None)
 	# df = pd.read_csv(DATA_PATH)
 
-	
-
 def tokenize(words: list):
 	bigrams = []
 	for i in range(len(words)):
@@ -205,50 +204,105 @@ def tokenize(words: list):
 	'''
 	feature_extraction(bigrams, words)
 
+def train_model_incremental():
+	"""
+	Train an SGDClassifier with HashingVectorizer incrementally
+	on the large CSV files using chunked reading.
+	"""
+	import numpy as np
 
-def logistic_regression(X_train, y_train, X_test, y_test):
-	vectorizer = TfidfVectorizer(ngram_range=(1,2), max_features=6000)
-	X_train_vectorized = vectorizer.fit_transform(X_train)
-	X_test_vectorized = vectorizer.transform(X_test)
+	vectorizer = HashingVectorizer(
+		n_features=2**18,
+		ngram_range=(1, 2),
+		alternate_sign=False,
+	)
+	model = SGDClassifier(
+		loss='log_loss',
+		random_state=42,
+	)
 
-	model = LogisticRegression(class_weight='balanced')
-	model.fit(X_train_vectorized, y_train)
-	model.predict(X_test_vectorized)
-	accuracy = model.score(X_test_vectorized, y_test) * 100
+	classes = [0, 1]  # binary: clean vs toxic
+	CHUNK_SIZE = 10_000
+	# Moderate weight boost for the minority (toxic) class.
+	# The dataset is ~93% clean / ~7% toxic.  'balanced' gives ~14x
+	# which causes massive over-prediction of toxic.  3x is enough to
+	# let the model learn toxic patterns without drowning out clean ones.
+	TOXIC_WEIGHT = 3.0
+	weight_map = {0: 1.0, 1: TOXIC_WEIGHT}
 
-	with open('vectorizer.pkl', 'wb') as file:
+	for csv_path in TRAIN_FILES:
+		if not os.path.exists(csv_path):
+			print(f"Warning: {csv_path} not found, skipping.")
+			continue
+		print(f"Training on {csv_path} ...")
+		for chunk in pd.read_csv(csv_path, chunksize=CHUNK_SIZE):
+			if 'text' not in chunk.columns:
+				print(f"  Skipping chunk — no 'text' column found.")
+				continue
+			chunk = chunk.dropna(subset=['text'])
+			if chunk.empty:
+				continue
+
+			# Build binary label: toxic if any score >= threshold
+			score_cols = [c for c in chunk.columns if c != 'text']
+			chunk['label'] = (chunk[score_cols].max(axis=1) >= TOXICITY_THRESHOLD).astype(int)
+
+			X_raw = chunk['text'].apply(clean_tweet)
+			y = chunk['label']
+
+			sample_weights = np.array([weight_map[label] for label in y])
+
+			X_vec = vectorizer.transform(X_raw)
+			model.partial_fit(X_vec, y, classes=classes, sample_weight=sample_weights)
+
+	print("Training complete.")
+
+	# Evaluate on test set
+	if os.path.exists(TEST_PATH):
+		print("Evaluating on test set ...")
+		y_true_all, y_pred_all = [], []
+		for chunk in pd.read_csv(TEST_PATH, chunksize=CHUNK_SIZE):
+			if 'text' not in chunk.columns:
+				continue
+			chunk = chunk.dropna(subset=['text'])
+			if chunk.empty:
+				continue
+			score_cols = [c for c in chunk.columns if c != 'text']
+			chunk['label'] = (chunk[score_cols].max(axis=1) >= TOXICITY_THRESHOLD).astype(int)
+			X_vec = vectorizer.transform(chunk['text'].apply(clean_tweet))
+			y_true_all.extend(chunk['label'].tolist())
+			y_pred_all.extend(model.predict(X_vec).tolist())
+		if y_true_all:
+			y_true = np.array(y_true_all)
+			y_pred = np.array(y_pred_all)
+			accuracy = np.mean(y_true == y_pred) * 100
+			# Per-class metrics
+			tp = np.sum((y_pred == 1) & (y_true == 1))
+			fp = np.sum((y_pred == 1) & (y_true == 0))
+			fn = np.sum((y_pred == 0) & (y_true == 1))
+			precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+			recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+			f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+			print(f"Test accuracy: {accuracy:.2f}%")
+			print(f"Toxic precision: {precision:.4f}  recall: {recall:.4f}  F1: {f1:.4f}")
+			print(f"  (TP={tp}, FP={fp}, FN={fn})")
+
+	# Save model and vectorizer
+	base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+	with open(os.path.join(base_dir, 'vectorizer.pkl'), 'wb') as file:
 		pickle.dump(vectorizer, file)
 		print("Vectorizer saved successfully!")
-
-	with open('model.pkl', 'wb') as file:
+	with open(os.path.join(base_dir, 'model.pkl'), 'wb') as file:
 		pickle.dump(model, file)
 		print("Model saved successfully!")
-
-	print(accuracy)
 
 	return model
 
 def feature_extraction(bigrams, words):
-	# Load the dataset
-	df = pd.read_csv(DATA_PATH)
-
-	# Create binary label: 1 if offensive or hate speech (class 0 or 1), 0 if neither (class 2)
-	df['label'] = (df['class'] != 2).astype(int)
-
-	# 
-	df_subset = df[['tweet', 'label']].copy()
-
-	df_subset['tweet'] = df_subset['tweet'].apply(clean_tweet)
-
-	X = df_subset["tweet"]
-	y = df["label"]
-
-	# split the dataset 80/20 to train and test the model
-	X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-	model = logistic_regression(X_train, y_train, X_test, y_test)
-
-	return df_subset
+	"""
+	Trains the model from the new data files and saves the artifacts.
+	"""
+	train_model_incremental()
 
 '''
 # Source - https://stackoverflow.com/a/8858026
@@ -280,9 +334,6 @@ def retrain(text):
 
 def scoring(text: str, score: int) -> int:
 	return score
-
-def Decision():
-	return True
 
 #Input text
 # ↓

@@ -63,24 +63,34 @@ def _sentence_explanation(text: str) -> dict:
         }
 
     transformed = vec.transform([cleaned])
-    feature_names = vec.get_feature_names_out()
-    coefficients = mod.coef_[0]
-    non_zero_indices = transformed[0].nonzero()[1]
-
-    contributions = []
-    for index in non_zero_indices:
-        term = feature_names[index]
-        tfidf_value = transformed[0, index]
-        weight = coefficients[index]
-        contribution = float(tfidf_value * weight)
-        contributions.append((term, contribution))
-
-    contributions.sort(key=lambda item: item[1], reverse=True)
-
-    flagged_terms = [_format_contribution(term, score) for term, score in contributions if score > 0][:5]
-    allowed_terms = [_format_contribution(term, score) for term, score in sorted(contributions, key=lambda item: item[1]) if score < 0][:5]
-
     prediction = mod.predict(transformed)[0]
+
+    flagged_terms = []
+    allowed_terms = []
+
+    # HashingVectorizer does not expose feature names, so we attempt
+    # term-level explanation only when the vectorizer supports it.
+    try:
+        feature_names = vec.get_feature_names_out()
+        coefficients = mod.coef_[0]
+        non_zero_indices = transformed[0].nonzero()[1]
+
+        contributions = []
+        for index in non_zero_indices:
+            term = feature_names[index]
+            tfidf_value = transformed[0, index]
+            weight = coefficients[index]
+            contribution = float(tfidf_value * weight)
+            contributions.append((term, contribution))
+
+        contributions.sort(key=lambda item: item[1], reverse=True)
+
+        flagged_terms = [_format_contribution(term, score) for term, score in contributions if score > 0][:5]
+        allowed_terms = [_format_contribution(term, score) for term, score in sorted(contributions, key=lambda item: item[1]) if score < 0][:5]
+    except AttributeError:
+        # HashingVectorizer — no per-term breakdown available
+        pass
+
     summary = (
         "The model found stronger offensive-weighted terms in the sentence."
         if prediction == 1
@@ -88,7 +98,11 @@ def _sentence_explanation(text: str) -> dict:
     )
 
     if not flagged_terms and not allowed_terms:
-        summary = "The model classified the sentence, but no individual weighted terms were exposed for this exact input."
+        summary = (
+            "The model classified the sentence as "
+            + ("offensive." if prediction == 1 else "clean.")
+            + " Term-level breakdown is not available with the current vectorizer."
+        )
 
     return {
         "mode": "sentence",

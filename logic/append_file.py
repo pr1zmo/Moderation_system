@@ -1,49 +1,32 @@
-def get_class(label: str) -> str:
-    """Convert label to class: 0 (positive) -> 2 (neither), 1 (offensive) -> 1 (offensive)"""
-    if label == '0':
-        return '2'
-    return '1'
+import csv
 
-def get_neither(label: str) -> str:
-    """Get neither count: 3 for positive, 0 for offensive"""
-    if label == '0':
-        return '3'
-    return '0'
 
 def append_file_contents(source_filename, target_filename):
-    # try:
-        # Open the source file in read mode ('r')
-        with open(source_filename, 'r') as source_file:
-            next(source_file)  # Skip header
-            
-            # Get current line count in target file
-            with open(target_filename, 'r') as target_file:
-                # Count existing lines (subtract 1 for header)
-                current_count = sum(1 for _ in target_file) - 1
-            
-            # Append new data
-            with open(target_filename, 'a') as target_file:
-                for line in source_file:
-                    line = line.strip()
-                    if not line:  # Skip empty lines
-                        continue
-                    # Parse CSV: label,sentence
-                    parts = line.split(',', 1)  # Split only on first comma
-                    if len(parts) != 2:
-                        continue
-                    
-                    label, tweet = parts
-                    
-                    '''
-                    Format: index,count,hate_speech,offensive_language,neither,class,tweet
-                    '''
-                    formatted_line = f"{current_count},{3},{0},{label[0]},{get_neither(label)},{get_class(label)},{tweet}\n"
-                    target_file.write(formatted_line)
-                    current_count += 1
-    # except FileNotFoundError:
-    #     print(f"Error: One of the files not found. Check file names.")
-    # except Exception as e:
-    #     print(f"An error occurred: {e}")
+    """
+    Append feedback entries (label,sentence) from source_filename
+    into target_filename using the new Jigsaw-style CSV format:
+        text,toxicity,severe_toxicity,obscene,threat,insult,identity_attack,sexual_explicit
+
+    Feedback label '1' (offensive) → toxicity scores set to 1.0
+    Feedback label '0' (clean)     → toxicity scores set to 0.0
+    """
+    with open(source_filename, 'r', encoding='utf-8') as source_file:
+        reader = csv.reader(source_file)
+        next(reader, None)  # Skip header
+
+        with open(target_filename, 'a', newline='', encoding='utf-8') as target_file:
+            writer = csv.writer(target_file)
+            for row in reader:
+                if len(row) < 2:
+                    continue
+                label, text = row[0].strip(), row[1].strip()
+                if not text:
+                    continue
+
+                # Map feedback label to toxicity scores
+                score = 1.0 if label == '1' else 0.0
+                # text,toxicity,severe_toxicity,obscene,threat,insult,identity_attack,sexual_explicit
+                writer.writerow([text, score, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
 # Example usage:
 # Assume 'file1.txt' contains "Line 1\nLine 2" and 'file2.txt' contains "Line 3\nLine 4"

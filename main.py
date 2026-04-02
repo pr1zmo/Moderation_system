@@ -35,4 +35,4 @@ def feedback():
     return jsonify({"status": "error", "message": "Invalid input"}), 400
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=8000)
